@@ -9,6 +9,9 @@ PlanetMesh::PlanetMesh(int subdivisions)
 {
     GenerateBaseIcosahedron();
     Subdivide(subdivisions);
+
+    UpdateNormals();
+    generateNoise();
 }
 
 #pragma region base sphere generation
@@ -105,17 +108,27 @@ int PlanetMesh::GetMidpointIndex(std::map<int, int> cache, int a, int b)
 #pragma endregion
 
 #pragma region edit the sphere with noise
-void PlanetMesh::generateNoise() {
-    FastNoiseLite noise;
+void PlanetMesh::generateNoise()
+{
+    FastNoiseLite noise(time(NULL));
 
     noise.SetNoiseType(FastNoiseLite::NoiseType::NoiseType_OpenSimplex2);
+    noise.SetFractalType(FastNoiseLite::FractalType::FractalType_FBm);
+    noise.SetFractalLacunarity(4.f);
+    noise.SetFractalOctaves(4);
+    noise.SetFractalGain(.4f);
+
+    for(int i = 0; i < vertices.size(); i++) {
+        vertices[i] = vertices[i] + normals[i] * noise.GetNoise(vertices[i].x, vertices[i].y, vertices[i].z) * 10;
+    }
 }
 #pragma endregion
 
 /**
  * computes the normal of a face
  */
-void PlanetMesh::FaceNormal(Vector &normal, int a, int b, int c) {
+void PlanetMesh::FaceNormal(Vector &normal, int a, int b, int c)
+{
     Vector AB, AC;
 
     AB = vertices[b] - vertices[a];
@@ -125,18 +138,21 @@ void PlanetMesh::FaceNormal(Vector &normal, int a, int b, int c) {
     normal = cross(AB, AC);
 }
 
-void PlanetMesh::UpdateNormals() {
-    
+void PlanetMesh::UpdateNormals()
+{
+
     Vector normal;
 
     // initialize the normals
     normals.resize(vertices.size());
-    for(int i = 0; i < vertices.size(); i++) {
+    for (int i = 0; i < vertices.size(); i++)
+    {
         normals[i] = Vector(0, 0, 0);
     }
 
-    //compute the normal of each face
-    for(Triangle t : triangles) {
+    // compute the normal of each face
+    for (Triangle t : triangles)
+    {
         int a = t[0];
         int b = t[1];
         int c = t[2];
@@ -149,23 +165,27 @@ void PlanetMesh::UpdateNormals() {
         normals[c] = normals[c] + normal;
     }
 
-    //normalize all the values
-    for(int i = 0; i < normals.size(); i++) {
+    // normalize all the values
+    for (int i = 0; i < normals.size(); i++)
+    {
         normals[i] = normalize(normals[i]);
     }
 }
 
-Mesh PlanetMesh::GenerateMesh() {
+Mesh PlanetMesh::GenerateMesh()
+{
     Mesh planet = Mesh(GL_TRIANGLES);
 
     UpdateNormals();
 
-    for(int i = 0; i < vertices.size(); i++) {
+    for (int i = 0; i < vertices.size(); i++)
+    {
         planet.vertex(vertices[i]);
         planet.normal(normals[i]);
     }
 
-    for(Triangle tri : triangles) {
+    for (Triangle tri : triangles)
+    {
         planet.triangle(tri[0], tri[1], tri[2]);
     }
 

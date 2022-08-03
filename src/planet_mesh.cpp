@@ -112,11 +112,57 @@ void PlanetMesh::generateNoise() {
 }
 #pragma endregion
 
+/**
+ * computes the normal of a face
+ */
+void PlanetMesh::FaceNormal(Vector &normal, int a, int b, int c) {
+    Vector AB, AC;
+
+    AB = vertices[b] - vertices[a];
+
+    AC = vertices[c] - vertices[a];
+
+    normal = cross(AB, AC);
+}
+
+void PlanetMesh::UpdateNormals() {
+    
+    Vector normal;
+
+    // initialize the normals
+    normals.resize(vertices.size());
+    for(int i = 0; i < vertices.size(); i++) {
+        normals[i] = Vector(0, 0, 0);
+    }
+
+    //compute the normal of each face
+    for(Triangle t : triangles) {
+        int a = t[0];
+        int b = t[1];
+        int c = t[2];
+
+        FaceNormal(normal, a, b, c);
+
+        // update the normal of each vertex
+        normals[a] = normals[a] + normal;
+        normals[b] = normals[b] + normal;
+        normals[c] = normals[c] + normal;
+    }
+
+    //normalize all the values
+    for(int i = 0; i < normals.size(); i++) {
+        normals[i] = normalize(normals[i]);
+    }
+}
+
 Mesh PlanetMesh::GenerateMesh() {
     Mesh planet = Mesh(GL_TRIANGLES);
 
-    for(Vector vert : vertices) {
-        planet.vertex(vert);
+    UpdateNormals();
+
+    for(int i = 0; i < vertices.size(); i++) {
+        planet.vertex(vertices[i]);
+        planet.normal(normals[i]);
     }
 
     for(Triangle tri : triangles) {
